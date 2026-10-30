@@ -21,7 +21,7 @@ var DefaultRules = map[string]string{
 }
 
 func main() {
-	for ext, folder := range DefaultRules {
-		fmt.Printf("Расширение: %s -> Папка: %s\n", ext, folder)
+	for ext := range DefaultRules {
+		fmt.Printf("Расширение: %s\n", ext)
 	}
 }
