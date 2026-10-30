@@ -10,6 +10,21 @@ type Point struct {
 	x, y int
 }
 
+func (p Point) ToRune() rune {
+	switch {
+	case p.x == 0 && p.y == -1:
+		return '▲'
+	case p.x == 0 && p.y == 1:
+		return '▼'
+	case p.x == -1 && p.y == 0:
+		return '◀'
+	case p.x == 1 && p.y == 0:
+		return '▶'
+	default:
+		return '●'
+	}
+}
+
 type Game struct {
 	snake    []Point
 	food     Point
@@ -35,6 +50,52 @@ func NewGame(width, height int) *Game {
 	return g
 }
 
+func (g *Game) handleInput(ev termbox.Event) {
+	if ev.Type != termbox.EventKey {
+		return
+	}
+
+	newDir := g.dir
+	switch ev.Key {
+	case termbox.KeyArrowUp:
+		newDir = Point{0, -1}
+	case termbox.KeyArrowDown:
+		newDir = Point{0, 1}
+	case termbox.KeyArrowLeft:
+		newDir = Point{-1, 0}
+	case termbox.KeyArrowRight:
+		newDir = Point{1, 0}
+	case termbox.KeyEsc:
+		g.stop()
+		return
+	}
+	switch ev.Ch {
+	case 'w', 'W':
+		newDir = Point{0, -1}
+	case 's', 'S':
+		newDir = Point{0, 1}
+	case 'a', 'A':
+		newDir = Point{-1, 0}
+	case 'd', 'D':
+		newDir = Point{1, 0}
+	case 'q', 'Q':
+		g.stop()
+		return
+	}
+
+	// Запрет разворота на 180°
+	g.dir = newDir
+}
+
+// stop закрывает канал quit один раз: повторное нажатие Q или Esc не паникует.
+func (g *Game) stop() {
+	select {
+	case <-g.quit:
+	default:
+		close(g.quit)
+	}
+}
+
 func (g *Game) draw() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 
@@ -52,9 +113,14 @@ func (g *Game) draw() {
 	termbox.SetCell(0, g.height-1, '└', termbox.ColorWhite, termbox.ColorDefault)
 	termbox.SetCell(g.width-1, g.height-1, '┘', termbox.ColorWhite, termbox.ColorDefault)
 
-	// Голова змейки
-	head := g.snake[0]
-	termbox.SetCell(head.x, head.y, '■', termbox.ColorLightMagenta, termbox.ColorDefault)
+	// Змейка
+	for i, p := range g.snake {
+		if i == 0 {
+			termbox.SetCell(p.x, p.y, g.dir.ToRune(), termbox.ColorLightMagenta, termbox.ColorDefault)
+		} else {
+			termbox.SetCell(p.x, p.y, '○', termbox.ColorLightMagenta, termbox.ColorDefault)
+		}
+	}
 
 	// Счёт и уровень
 	scoreStr := fmt.Sprintf("Score: %d  Level: %d", g.score, g.level)
@@ -62,6 +128,7 @@ func (g *Game) draw() {
 		termbox.SetCell(i+1, 0, ch, termbox.ColorWhite, termbox.ColorDefault)
 	}
 
+	termbox.Flush()
 }
 
 func main() {
@@ -73,11 +140,21 @@ func main() {
 	defer termbox.Close()
 
 	game := NewGame(40, 20)
-	game.draw()
 
+	eventQueue := make(chan termbox.Event)
+	go func() {
+		for {
+			eventQueue <- termbox.PollEvent()
+		}
+	}()
+
+	game.draw()
 	for {
-		ev := termbox.PollEvent()
-		if ev.Type == termbox.EventKey && ev.Key == termbox.KeyEsc {
+		select {
+		case ev := <-eventQueue:
+			game.handleInput(ev)
+			game.draw()
+		case <-game.quit:
 			return
 		}
 	}
