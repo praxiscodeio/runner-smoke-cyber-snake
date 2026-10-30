@@ -62,7 +62,6 @@ func (g *Game) draw() {
 		termbox.SetCell(i+1, 0, ch, termbox.ColorWhite, termbox.ColorDefault)
 	}
 
-	termbox.Flush()
 }
 
 func main() {
