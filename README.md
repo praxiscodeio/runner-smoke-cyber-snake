@@ -1,3 +1,3 @@
 # runner-smoke-cyber-snake
 
-Smoke fixture for the praxiscode Runner (Cyber Snake, stage 4); not a student project.
+Smoke fixture for the praxiscode Runner (now: File Organizer stages 1-3); not a student project.
