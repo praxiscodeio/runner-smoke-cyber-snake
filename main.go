@@ -84,7 +84,9 @@ func (g *Game) handleInput(ev termbox.Event) {
 	}
 
 	// Запрет разворота на 180°
-	g.dir = newDir
+	if newDir.x != -g.dir.x || newDir.y != -g.dir.y {
+		g.dir = newDir
+	}
 }
 
 // stop закрывает канал quit один раз: повторное нажатие Q или Esc не паникует.
