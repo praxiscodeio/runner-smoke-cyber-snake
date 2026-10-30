@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 )
 
 var DefaultRules = map[string]string{
@@ -20,8 +22,40 @@ var DefaultRules = map[string]string{
 	".rar":  "Archives",
 }
 
-func main() {
-	for ext, folder := range DefaultRules {
-		fmt.Printf("Расширение: %s -> Папка: %s\n", ext, folder)
+type FileOrganizer struct {
+	sourceDir      string
+	rulesMap       map[string]string
+	processedFiles int
+	logFile        *os.File
+}
+
+func NewFileOrganizer(sourceDir string) (*FileOrganizer, error) {
+	if sourceDir == "" {
+		return nil, fmt.Errorf("путь к директории не может быть пустым")
 	}
+	// «inbox/» и «./inbox» — та же директория; Organize сравнивает с ней filepath.Dir
+	sourceDir = filepath.Clean(sourceDir)
+
+	info, err := os.Stat(sourceDir)
+	if err != nil {
+		return nil, fmt.Errorf("директория не найдена: %w", err)
+	}
+
+	if !info.IsDir() {
+		return nil, fmt.Errorf("указанный путь не является директорией: %s", sourceDir)
+	}
+
+	return &FileOrganizer{
+		sourceDir: sourceDir,
+		rulesMap:  DefaultRules,
+	}, nil
+}
+
+func main() {
+	fo, err := NewFileOrganizer(".")
+	if err != nil {
+		fmt.Printf("Ошибка: %v\n", err)
+		return
+	}
+	fmt.Printf("FileOrganizer создан для директории: %s\n", fo.sourceDir)
 }
